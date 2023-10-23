@@ -41,14 +41,26 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
         #Fill in start
-        #icmpHeader = recPacket[20:28]
-        dummy = struct.unpack_from("bbHHh", recPacket, 0)
-        print(dummy)
+        ipHeader = struct.unpack('!BBHHHBBH4s4s' , recPacket[:20])  #grab entire IP header
+        icmpHeader = recPacket[20:28] #bits 160-224 are the ICMP header (recPacket indexes bytes not bits so 20*8 = 160 28*8 = 224)
+        icmpType, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)   #unpack the header to individual variables
+        timeSent, = struct.unpack("d", recPacket[28:])   #unpack the payload
+
+        rtt = (timeReceived - timeSent) * 1000  
+        senderIP = inet_ntoa(ipHeader[8])   #pulled from ip header
+        ttl = ipHeader[5]   #pulled from ip header
+        length = len(recPacket)
+        
+
         #Fill in end
         timeLeft = timeLeft - howLongInSelect
         
         if timeLeft <= 0:
             return "Request timed out."
+        
+        return f"Reply: {senderIP} rtt_time={rtt} bytes={length} TTL={ttl}"
+
+        
 
 def sendOnePing(mySocket, destAddr, ID):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
@@ -97,4 +109,8 @@ def ping(host, timeout=1):
         time.sleep(1)# one second
     return delay
 
-ping("127.0.0.1")
+ping("ftp.am.debian.org") #Ping armenia
+#ping("ftp.au.debian.org") #Ping australia
+#ping("ftp.br.debian.org") #Ping brazil
+#ping("ftp.us.debian.org") #Ping US
+#ping("ftp.tw.debian.org") #Ping taiwan
